@@ -1,54 +1,53 @@
 import javax.sound.sampled.*;
 import java.io.File;
-import java.io.IOException;
 
 public class SoundManager {
     private Clip bgmClip;
 
-    // Untuk Sound Effect (Sekali main, ex: langkah, dadu)
-    public void playSound(String filename) {
-        try {
-            File soundFile = new File("assets/" + filename);
-            if (!soundFile.exists()) return; // Kalau ga ada, diam aja
+    // [SOLUSI AUDIO]: Menggunakan Alamat Lengkap (Absolute Path)
+    // Karena Java kadang bingung cari file, kita kasih alamat lengkap folder assets-nya.
+    // PERHATIKAN: Path ini harus diganti kalau pindah laptop!
+    private static final String BASE_PATH = "C:/KULIAH/ASD/FP_ASD/FP_ASD_Snaknladder_Maze/SnL/ProjectASD/Project/assets/";
 
-            AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioIn);
-            clip.start();
-        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            System.out.println("Audio SFX error: " + e.getMessage());
-        }
+    public void playSound(String filename) {
+        loadAndPlay(filename, false); // False = putar sekali aja (SFX)
     }
 
-    // Untuk Background Music (Looping)
     public void playBGM(String filename) {
-        try {
-            stopBGM(); // Matikan lagu sebelumnya kalau ada
-            File soundFile = new File("assets/" + filename);
-            
-            // --- DEBUG PRINT (Cek error di console bawah) ---
-            System.out.println("Mencoba memutar BGM: " + soundFile.getAbsolutePath());
-            if (!soundFile.exists()) {
-                System.out.println("ERROR: File BGM tidak ditemukan di folder assets!");
-                return;
-            }
-            // -----------------------------------------------
+        stopBGM(); // Matiin lagu lama dulu
+        loadAndPlay(filename, true); // True = putar terus-terusan (Looping)
+    }
 
-            AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
-            bgmClip = AudioSystem.getClip();
-            bgmClip.open(audioIn);
-            bgmClip.loop(Clip.LOOP_CONTINUOUSLY); // Loop selamanya
-            bgmClip.start();
+    private void loadAndPlay(String filename, boolean isLooping) {
+        try {
+            String fullPath = BASE_PATH + filename;
+            File file = new File(fullPath);
+
+            if (!file.exists()) return; // Kalau file gak ada, diem aja biar gak error
+
+            AudioInputStream audioIn = AudioSystem.getAudioInputStream(file);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioIn);
+
+            if (isLooping) {
+                bgmClip = clip;
+                // Kecilin volume dikit biar gak berisik
+                try {
+                    FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                    gainControl.setValue(-10.0f); 
+                } catch (Exception e) {}
+                clip.loop(Clip.LOOP_CONTINUOUSLY);
+            }
+            clip.start();
         } catch (Exception e) {
-            System.out.println("BGM Error (Pastikan format WAV 16-bit): " + e.getMessage());
-            e.printStackTrace(); 
+            // Error ditangkap disini biar program gak crash
+            e.printStackTrace();
         }
     }
 
     public void stopBGM() {
         if (bgmClip != null && bgmClip.isRunning()) {
-            bgmClip.stop();
-            bgmClip.close();
+            bgmClip.stop(); bgmClip.close();
         }
     }
 }
